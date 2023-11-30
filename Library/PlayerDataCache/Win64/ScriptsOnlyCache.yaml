@@ -30,8 +30,6 @@ ScriptsOnlyBuild:
       Script: {instanceID: 0}
     - Class: 48
       Script: {instanceID: 0}
-    - Class: 89
-      Script: {instanceID: 0}
     - Class: 104
       Script: {instanceID: 0}
     - Class: 114
@@ -343,7 +341,7 @@ ScriptsOnlyBuild:
     className: UnityOnControllerColliderHitMessageListener
   - hash:
       serializedVersion: 2
-      Hash: 747284d692f6c45bae4955ed655ed04c
+      Hash: aea064e6f4a58195de027fda2eef8999
     assemblyName: Unity.TextMeshPro
     namespaceName: TMPro
     className: TextMeshPro
@@ -896,4 +894,4 @@ ScriptsOnlyBuild:
   platform: 19
   scenePathNames:
   - Assets/Scenes/SampleScene.unity
-  playerPath: D:/Projects/Unity/Multiplayer/Build/Multiplayer.exe
+  playerPath: /home/stefan_moldoveanu23/disk-1/poli-server/Build/WindowsPlayer.exe

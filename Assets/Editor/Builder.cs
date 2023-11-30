@@ -18,7 +18,7 @@ public class Builder
                 "Assets/Scenes/SampleScene.unity",
             },
             // Change to location the output should go
-            locationPathName = "../WindowsPlayer/",
+            locationPathName = "/home/stefan_moldoveanu23/disk-1/poli-server/Build/WindowsPlayer.exe",
             options = BuildOptions.CleanBuildCache | BuildOptions.StrictMode,
             target = BuildTarget.StandaloneWindows64
         };
