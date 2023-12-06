@@ -1,63 +1,40 @@
 using Riptide;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class Player : MonoBehaviour
+public class Player
 {
-    public static Dictionary<ushort, Player> list = new Dictionary<ushort, Player>();
+    public readonly ushort id;
+    private Vector3 position;
 
-    public ushort Id { get; private set; }
-    public string Username { get; private set; }
-
-    private void OnDestroy()
+    public Player(ushort id)
     {
-        list.Remove(Id);
+        this.id = id;
+        position = Vector3.zero;
     }
 
-    public static void Spawn(ushort id, string username)
+    public Player GetPlayer1(ushort id)
     {
-        foreach (Player otherPlayer in list.Values)
-        {
-            otherPlayer.SendSpawned(id);
-        }
-
-        Player player = Instantiate(GameLogic.Singleton.PlayerPrefab, new Vector3(0.0f, 1.0f, 0.0f), Quaternion.identity).GetComponent<Player>();
-        player.name = $"Player {id} ({(string.IsNullOrEmpty(username) ? "Guest" : username)})";
-
-        player.Id = id ;
-        player.Username = (string.IsNullOrEmpty(username) ? $"Guest {id}" : username);
-
-        player.SendSpawned();
-        list.Add(id, player);
+        Player player1 = new(id) { position = new Vector3(0.25f, 0.25f, 0.0f) };
+        return player1;
     }
 
-    #region Messages
-    private void SendSpawned()
+    public Player GetPlayer2(ushort id)
     {
-        NetworkManager.Singleton.Server.SendToAll(AddSpawnData(Message.Create(MessageSendMode.Reliable, ServerToClientId.playerSpawned)));
+        Player player2 = new(id) { position = new Vector3(0.25f, 0.75f, 0.0f) };
+        return player2;
     }
 
-    private void SendSpawned(ushort toClientId)
+    public void UpdatePosition(Vector3 position)
     {
-        NetworkManager.Singleton.Server.Send(
-            AddSpawnData(Message.Create(MessageSendMode.Reliable, ServerToClientId.playerSpawned)),
-            toClientId
-        );
+        this.position = position;
     }
 
-    private Message AddSpawnData(Message message)
+    public void SendPosition()
     {
-        message.AddUShort(Id);
-        message.AddString(Username);
-        message.AddVector3(transform.position);
-        return message;
-    }
+        Message playerPosition = Message.Create(MessageSendMode.Unreliable, (ushort)(ServerToClientId.playerData));
+        playerPosition.AddUShort(id);
+        playerPosition.AddVector3(position);
 
-    [MessageHandler((ushort)(ClientToServerId.name))]
-    private static void Name(ushort fromClientId, Message message)
-    {
-        Spawn(fromClientId, message.GetString());
+        NetworkManager.Singleton.Server.SendToAll(playerPosition);
     }
-    #endregion
 }
