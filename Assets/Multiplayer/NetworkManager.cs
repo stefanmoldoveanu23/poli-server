@@ -8,12 +8,14 @@ public enum ServerToClientId : ushort
     playerJoined = 2,
     startGame = 3,
     playerData = 4,
+    playerAction = 5,
 }
 
 public enum ClientToServerId : ushort
 {
     isReady = 1,
     playerData = 2,
+    playerAction = 3,
 }
 
 public class NetworkManager : MonoBehaviour
@@ -41,10 +43,7 @@ public class NetworkManager : MonoBehaviour
     [SerializeField] private ushort port;
     [SerializeField] private ushort maxClientCount;
 
-    private static ushort? Session { get; set; }
-    private static Player player1;
-    private static Player player2;
-    private static ushort playersReady;
+    private static Session session;
 
     private void Awake()
     {
@@ -61,19 +60,13 @@ public class NetworkManager : MonoBehaviour
         Server.ClientConnected += PlayerJoined;
         Server.ClientDisconnected += PlayerLeft;
 
-        Session = null;
-        player1 = null;
-        player2 = null;
-        playersReady = 0;
+        session = null;
     }
 
     private void FixedUpdate()
     {
-        if (playersReady == 2)
-        {
-            player1.SendPosition();
-            player2.SendPosition();
-        }
+        session?.Update();
+
         Server.Update();
     }
 
@@ -85,35 +78,9 @@ public class NetworkManager : MonoBehaviour
     private void PlayerJoined(object sender, ServerConnectedEventArgs e)
     {
         e.Client.CanTimeout = false;
-        if (Session == null)
-        {
-            Session = 1;
-            player1 = new Player(e.Client.Id);
+        session ??= new Session(1);
 
-            Message sendSession = Message.Create(MessageSendMode.Reliable, (ushort)(ServerToClientId.session));
-            sendSession.AddUShort(Session.Value);
-
-            Server.Send(sendSession, e.Client.Id);
-            Debug.Log($"Player1 joined with id {e.Client.Id}!");
-        }
-        else
-        {
-            Message sendSession = Message.Create(MessageSendMode.Reliable, (ushort)(ServerToClientId.session));
-            sendSession.AddUShort(Session.Value);
-
-            Server.Send(sendSession, e.Client.Id);
-
-            Message notifyPlayer1 = Message.Create(MessageSendMode.Reliable, (ushort)(ServerToClientId.playerJoined));
-            notifyPlayer1.AddUShort(e.Client.Id);
-            Server.Send(notifyPlayer1, player1.id);
-
-            player2 = new Player(e.Client.Id);
-            Debug.Log($"Player2 joined with id {e.Client.Id}!");
-
-            Message notifyPlayer2 = Message.Create(MessageSendMode.Reliable, (ushort)(ServerToClientId.playerJoined));
-            notifyPlayer2.AddUShort(Session.Value);
-            Server.Send(notifyPlayer2 , player2.id);
-        }
+        session.AddPlayer(e.Client.Id);
     }
 
     private void PlayerLeft(object sender, ServerDisconnectedEventArgs e)
@@ -124,13 +91,11 @@ public class NetworkManager : MonoBehaviour
     [MessageHandler((ushort)(ClientToServerId.isReady))]
     private static void PlayerReady(ushort fromClientId, Message message)
     {
-        ++playersReady;
+        session.SetReady(fromClientId);
 
-        if (playersReady == 2)
+        if (session.IsReady())
         {
-            Message startGame = Message.Create(MessageSendMode.Reliable, (ushort)(ServerToClientId.startGame));
-            startGame.AddUShort(Session.Value);
-            Singleton.Server.SendToAll(startGame);
+            session.StartGame();
         }
     }
 
@@ -139,13 +104,14 @@ public class NetworkManager : MonoBehaviour
     {
         Vector3 position = message.GetVector3();
 
-        if (fromClientId == player1.id)
-        {
-            player1.UpdatePosition(position);
-        }
-        else
-        {
-            player2.UpdatePosition(position);
-        }
+        session.UpdatePlayerPosition(fromClientId, position);
+    }
+
+    [MessageHandler((ushort)ClientToServerId.playerAction)]
+    private static void HandlePlayerAction(ushort fromClientId, Message message)
+    {
+        ushort action = message.GetUShort();
+
+        session.HandlePlayerAction(fromClientId, action);
     }
 }
