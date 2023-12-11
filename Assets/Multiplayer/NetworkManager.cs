@@ -9,6 +9,8 @@ public enum ServerToClientId : ushort
     startGame = 3,
     playerData = 4,
     playerAction = 5,
+    gameOver = 6,
+    updateRestartCount = 7,
 }
 
 public enum ClientToServerId : ushort
@@ -16,6 +18,7 @@ public enum ClientToServerId : ushort
     isReady = 1,
     playerData = 2,
     playerAction = 3,
+    updateRestartCount = 4,
 }
 
 public class NetworkManager : MonoBehaviour
@@ -113,5 +116,13 @@ public class NetworkManager : MonoBehaviour
         ushort action = message.GetUShort();
 
         session.HandlePlayerAction(fromClientId, action);
+    }
+
+    [MessageHandler((ushort)ClientToServerId.updateRestartCount)]
+    private static void UpdateRestartCound(ushort fromClientId, Message message)
+    {
+        bool wantsRestart = message.GetBool();
+
+        session.HandleReadyToRestart(wantsRestart);
     }
 }

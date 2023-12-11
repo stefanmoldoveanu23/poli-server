@@ -20,6 +20,7 @@ public class Player
         this.id = id;
         position = Vector3.zero;
         IsReady = false;
+        Dead = false;
 
         Debug.Log($"(PLAYER): Player joined with id {this.id}.");
     }

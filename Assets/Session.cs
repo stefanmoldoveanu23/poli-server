@@ -8,10 +8,13 @@ public class Session
     private Player player1;
     private Player player2;
 
+    private ushort readyToRestart;
+
     public Session(ushort id)
     {
         this.id = id;
         player1 = player2 = null;
+        readyToRestart = 0;
 
         Debug.Log($"(SESSION): Session started with id {this.id}.");
     }
@@ -32,6 +35,14 @@ public class Session
         }
     }
 
+    public void Reset()
+    {
+        player1 = Player.GetPlayer1(player1.id);
+        player2 = Player.GetPlayer2(player2.id);
+
+        readyToRestart = 0;
+    }
+
     public void SetReady(ushort playerId)
     {
         if (player1.id == playerId)
@@ -47,6 +58,32 @@ public class Session
     public bool IsReady()
     {
         return player1.IsReady && player2.IsReady;
+    }
+
+    public void HandleReadyToRestart(bool wantsRestart)
+    {
+        if (wantsRestart)
+        {
+            ++readyToRestart;
+        }
+        else
+        {
+            if (readyToRestart > 0)
+            {
+                --readyToRestart;
+            }
+        }
+
+        ushort value = readyToRestart;
+
+        if (readyToRestart == 2)
+        {
+            Reset();
+            player1.SetReady();
+            player2.SetReady();
+        }
+
+        SendUpdateRestartCount(value);
     }
 
     public void AddPlayer(ushort playerId)
@@ -97,6 +134,11 @@ public class Session
                         player2.SetDead();
                     }
 
+                    if (player1.Dead && player2.Dead)
+                    {
+                        SendGameOver();
+                    }
+
                     break;
                 }
             default:
@@ -127,6 +169,23 @@ public class Session
 
         NetworkManager.Singleton.Server.Send(sendAction, player1.id);
         NetworkManager.Singleton.Server.Send(sendAction, player2.id);
+    }
+
+    private void SendUpdateRestartCount(ushort count)
+    {
+        Message updateRestartCount = Message.Create(MessageSendMode.Reliable, (ushort)ServerToClientId.updateRestartCount);
+        updateRestartCount.AddUShort(count);
+
+        NetworkManager.Singleton.Server.Send(updateRestartCount, player1.id);
+        NetworkManager.Singleton.Server.Send(updateRestartCount, player2.id);
+    }
+
+    private void SendGameOver()
+    {
+        Message gameOver = Message.Create(MessageSendMode.Reliable, (ushort)ServerToClientId.gameOver);
+
+        NetworkManager.Singleton.Server.Send(gameOver, player1.id);
+        NetworkManager.Singleton.Server.Send(gameOver, player2.id);
     }
     #endregion
 }
