@@ -1,4 +1,5 @@
 using Riptide;
+using System;
 using UnityEngine;
 
 public class Session
@@ -8,6 +9,8 @@ public class Session
     private Player player1;
     private Player player2;
 
+    private EnemyManager enemyManager;
+
     private ushort readyToRestart;
 
     public Session(ushort id)
@@ -15,6 +18,7 @@ public class Session
         this.id = id;
         player1 = player2 = null;
         readyToRestart = 0;
+        enemyManager = new EnemyManager(id, 1, 0.6f, 5.0f);
 
         Debug.Log($"(SESSION): Session started with id {this.id}.");
     }
@@ -32,6 +36,11 @@ public class Session
             {
                 player2.SendPosition();
             }
+
+            if (!player1.Dead || !player2.Dead)
+            {
+                enemyManager.Update();
+            }
         }
     }
 
@@ -39,6 +48,8 @@ public class Session
     {
         player1 = Player.GetPlayer1(player1.id);
         player2 = Player.GetPlayer2(player2.id);
+
+        enemyManager = new EnemyManager(id, 1, 0.6f, 5.0f);
 
         readyToRestart = 0;
     }
@@ -123,6 +134,10 @@ public class Session
                 {
                     break;
                 }
+            case (ushort)PlayerActions.shot:
+                {
+                    break;
+                }
             case (ushort)PlayerActions.died:
                 {
                     if (player1.id == playerId)
@@ -151,14 +166,24 @@ public class Session
         SendAction(playerId, action);
     }
 
+    public void HandleEnemyHurt(Guid enemyId)
+    {
+        enemyManager.HandleEnemyHurt(enemyId);
+    }
+
     #region MessagesFromSession
+    public void SendToAll(Message message)
+    {
+        NetworkManager.Singleton.Server.Send(message, player1.id);
+        NetworkManager.Singleton.Server.Send(message, player2.id);
+    }
+
     public void StartGame()
     {
         Message startGame = Message.Create(MessageSendMode.Reliable, (ushort)(ServerToClientId.startGame));
         startGame.AddUShort(id);
 
-        NetworkManager.Singleton.Server.Send(startGame, player1.id);
-        NetworkManager.Singleton.Server.Send(startGame, player2.id);
+        SendToAll(startGame);
     }
 
     private void SendAction(ushort playerId, ushort action)
@@ -167,8 +192,7 @@ public class Session
         sendAction.AddUShort(playerId);
         sendAction.AddUShort(action);
 
-        NetworkManager.Singleton.Server.Send(sendAction, player1.id);
-        NetworkManager.Singleton.Server.Send(sendAction, player2.id);
+        SendToAll(sendAction);
     }
 
     private void SendUpdateRestartCount(ushort count)
@@ -176,16 +200,14 @@ public class Session
         Message updateRestartCount = Message.Create(MessageSendMode.Reliable, (ushort)ServerToClientId.updateRestartCount);
         updateRestartCount.AddUShort(count);
 
-        NetworkManager.Singleton.Server.Send(updateRestartCount, player1.id);
-        NetworkManager.Singleton.Server.Send(updateRestartCount, player2.id);
+        SendToAll(updateRestartCount);
     }
 
     private void SendGameOver()
     {
         Message gameOver = Message.Create(MessageSendMode.Reliable, (ushort)ServerToClientId.gameOver);
 
-        NetworkManager.Singleton.Server.Send(gameOver, player1.id);
-        NetworkManager.Singleton.Server.Send(gameOver, player2.id);
+        SendToAll(gameOver);
     }
     #endregion
 }

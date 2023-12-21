@@ -4,7 +4,8 @@ using UnityEngine;
 public enum PlayerActions: ushort
 {
     gotHit = 1,
-    died = 2,
+    shot = 2,
+    died = 3,
 }
 
 public class Player

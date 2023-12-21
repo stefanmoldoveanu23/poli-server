@@ -1,5 +1,6 @@
 using Riptide;
 using Riptide.Utils;
+using System;
 using UnityEngine;
 
 public enum ServerToClientId : ushort
@@ -9,8 +10,11 @@ public enum ServerToClientId : ushort
     startGame = 3,
     playerData = 4,
     playerAction = 5,
-    gameOver = 6,
-    updateRestartCount = 7,
+    newEnemy = 6,
+    updateEnemySpeed = 7,
+    enemyDead = 8,
+    gameOver = 9,
+    updateRestartCount = 10,
 }
 
 public enum ClientToServerId : ushort
@@ -18,7 +22,8 @@ public enum ClientToServerId : ushort
     isReady = 1,
     playerData = 2,
     playerAction = 3,
-    updateRestartCount = 4,
+    enemyHurt = 4,
+    updateRestartCount = 5,
 }
 
 public class NetworkManager : MonoBehaviour
@@ -88,7 +93,12 @@ public class NetworkManager : MonoBehaviour
 
     private void PlayerLeft(object sender, ServerDisconnectedEventArgs e)
     {
+        session = null;
+    }
 
+    public void SendToAllInSession(ushort sessionId, Message message)
+    {
+        session?.SendToAll(message);
     }
 
     [MessageHandler((ushort)(ClientToServerId.isReady))]
@@ -107,7 +117,7 @@ public class NetworkManager : MonoBehaviour
     {
         Vector3 position = message.GetVector3();
 
-        session.UpdatePlayerPosition(fromClientId, position);
+        session?.UpdatePlayerPosition(fromClientId, position);
     }
 
     [MessageHandler((ushort)ClientToServerId.playerAction)]
@@ -115,14 +125,22 @@ public class NetworkManager : MonoBehaviour
     {
         ushort action = message.GetUShort();
 
-        session.HandlePlayerAction(fromClientId, action);
+        session?.HandlePlayerAction(fromClientId, action);
+    }
+
+    [MessageHandler((ushort)ClientToServerId.enemyHurt)]
+    private static void HandleEnemyHurt(ushort _, Message message)
+    {
+        Guid guid = new(message.GetString());
+
+        session.HandleEnemyHurt(guid);
     }
 
     [MessageHandler((ushort)ClientToServerId.updateRestartCount)]
-    private static void UpdateRestartCound(ushort fromClientId, Message message)
+    private static void UpdateRestartCound(ushort _, Message message)
     {
         bool wantsRestart = message.GetBool();
 
-        session.HandleReadyToRestart(wantsRestart);
+        session?.HandleReadyToRestart(wantsRestart);
     }
 }
