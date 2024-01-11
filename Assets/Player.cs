@@ -5,7 +5,8 @@ public enum PlayerActions: ushort
 {
     gotHit = 1,
     shot = 2,
-    died = 3,
+    gotPowerUp = 3,
+    died = 4,
 }
 
 public class Player

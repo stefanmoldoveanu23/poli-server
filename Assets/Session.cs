@@ -126,15 +126,13 @@ public class Session
         }
     }
 
-    public void HandlePlayerAction(ushort playerId, ushort action)
+    public void HandlePlayerAction(ushort playerId, ushort action, Message message)
     {
         switch (action)
         {
             case (ushort)PlayerActions.gotHit:
-                {
-                    break;
-                }
             case (ushort)PlayerActions.shot:
+            case (ushort)PlayerActions.gotPowerUp:
                 {
                     break;
                 }
@@ -159,11 +157,11 @@ public class Session
             default:
                 {
                     Debug.LogError($"(PLAYER): Error; No handler for action with id {action}.");
-                    break;
+                    return;
                 }
         }
 
-        SendAction(playerId, action);
+        SendAction(playerId, action, message);
     }
 
     public void HandleEnemyHurt(Guid enemyId)
@@ -186,11 +184,26 @@ public class Session
         SendToAll(startGame);
     }
 
-    private void SendAction(ushort playerId, ushort action)
+    private void SendAction(ushort playerId, ushort action, Message message)
     {
         Message sendAction = Message.Create(MessageSendMode.Reliable, (ushort)ServerToClientId.playerAction);
         sendAction.AddUShort(playerId);
         sendAction.AddUShort(action);
+
+        switch (action)
+        {
+            case (ushort)PlayerActions.died:
+            case (ushort)PlayerActions.gotHit:
+            case (ushort)PlayerActions.shot:
+                {
+                    break;
+                }
+            case (ushort)PlayerActions.gotPowerUp:
+                {
+                    sendAction.AddString(message.GetString());
+                    break;
+                }
+        }
 
         SendToAll(sendAction);
     }

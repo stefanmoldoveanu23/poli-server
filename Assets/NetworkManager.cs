@@ -125,7 +125,7 @@ public class NetworkManager : MonoBehaviour
     {
         ushort action = message.GetUShort();
 
-        session?.HandlePlayerAction(fromClientId, action);
+        session?.HandlePlayerAction(fromClientId, action, message);
     }
 
     [MessageHandler((ushort)ClientToServerId.enemyHurt)]

@@ -4,6 +4,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
+public enum PowerUpType : ushort
+{
+    none = 0,
+    doubleFire = 1,
+    shield = 2,
+}
+
 public class EnemyManager
 {
     private readonly ushort sessionId;
@@ -75,27 +82,32 @@ public class EnemyManager
 
     public void HandleEnemyHurt(Guid guid)
     {
-        enemyList[guid].GetHurt();
-        if (enemyList[guid].Health <= 0.0f)
+        if (enemyList.ContainsKey(guid))
         {
-            Message enemyDead = Message.Create(MessageSendMode.Reliable, (ushort)ServerToClientId.enemyDead);
-            enemyDead.AddString(guid.ToString());
+            enemyList[guid].GetHurt();
+            if (enemyList[guid].Health <= 0.0f)
+            {
+                Message enemyDead = Message.Create(MessageSendMode.Reliable, (ushort)ServerToClientId.enemyDead);
+                enemyDead.AddString(guid.ToString());
 
-            if (Random.value > 0.9f)
-            {
-                enemyDead.AddUShort(1);
-            }
-            else if (Random.value < 0.1f)
-            {
-                enemyDead.AddUShort(2);
-            }
-            else
-            {
-                enemyDead.AddUShort(0);
-            }
+                if (Random.value > 0.9f)
+                {
+                    enemyDead.AddUShort((ushort)PowerUpType.doubleFire);
+                    enemyDead.AddString(Guid.NewGuid().ToString());
+                }
+                else if (Random.value < 0.1f)
+                {
+                    enemyDead.AddUShort((ushort)PowerUpType.shield);
+                    enemyDead.AddString(Guid.NewGuid().ToString());
+                }
+                else
+                {
+                    enemyDead.AddUShort((ushort)PowerUpType.none);
+                }
 
-            NetworkManager.Singleton.SendToAllInSession(sessionId, enemyDead);
-            enemyList.Remove(guid);
+                NetworkManager.Singleton.SendToAllInSession(sessionId, enemyDead);
+                enemyList.Remove(guid);
+            }
         }
     }
 }
