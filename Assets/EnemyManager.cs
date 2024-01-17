@@ -13,7 +13,7 @@ public enum PowerUpType : ushort
 
 public class EnemyManager
 {
-    private readonly ushort sessionId;
+    private readonly Guid sessionId;
     public ushort NumberOfEnemyTypes { get; private set; }
 
     private readonly float spawnInterval;
@@ -24,7 +24,7 @@ public class EnemyManager
 
     private readonly Dictionary<Guid, Enemy> enemyList;
 
-    public EnemyManager(ushort sessionId, ushort numberOfEnemyTypes, float spawnInterval, float speedUpdateInterval)
+    public EnemyManager(Guid sessionId, ushort numberOfEnemyTypes, float spawnInterval, float speedUpdateInterval)
     {
         this.sessionId = sessionId;
 

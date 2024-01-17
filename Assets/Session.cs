@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Session
 {
-    public readonly ushort id;
+    public readonly Guid guid;
 
     private Player player1;
     private Player player2;
@@ -13,14 +13,14 @@ public class Session
 
     private ushort readyToRestart;
 
-    public Session(ushort id)
+    public Session(Guid guid)
     {
-        this.id = id;
+        this.guid = guid;
         player1 = player2 = null;
         readyToRestart = 0;
-        enemyManager = new EnemyManager(id, 1, 0.6f, 5.0f);
+        enemyManager = new EnemyManager(guid, 1, 0.6f, 5.0f);
 
-        Debug.Log($"(SESSION): Session started with id {this.id}.");
+        Debug.Log($"(SESSION): Session started with id {this.guid}.");
     }
 
     public void Update()
@@ -49,7 +49,7 @@ public class Session
         player1 = Player.GetPlayer1(player1.id);
         player2 = Player.GetPlayer2(player2.id);
 
-        enemyManager = new EnemyManager(id, 1, 0.6f, 5.0f);
+        enemyManager = new EnemyManager(guid, 1, 0.6f, 5.0f);
 
         readyToRestart = 0;
     }
@@ -102,12 +102,12 @@ public class Session
         if (player1 == null)
         {
             player1 = Player.GetPlayer1(playerId);
-            player1.RecvSession(id);
+            player1.RecvSession(guid);
         }
         else
         {
             player2 = Player.GetPlayer2(playerId);
-            player2.RecvSession(id);
+            player2.RecvSession(guid);
 
             player1.RecvJoinNotif(player2.id);
             player2.RecvJoinNotif(player1.id);
@@ -176,10 +176,33 @@ public class Session
         NetworkManager.Singleton.Server.Send(message, player2.id);
     }
 
+    public void SendToOther(ushort playerId, Message message)
+    {
+        if (player1 == null || player2 == null)
+        {
+            return;
+        }
+
+        if (playerId != player1.id && playerId != player2.id)
+        {
+            Debug.LogError($"(SESSION): No player with id {playerId} in session with Guid {guid}!");
+            return;
+        }
+
+        if (playerId == player1.id)
+        {
+            NetworkManager.Singleton.Server.Send(message, player2.id);
+        }
+        else
+        {
+            NetworkManager.Singleton.Server.Send(message, player1.id);
+        }
+    }
+
     public void StartGame()
     {
         Message startGame = Message.Create(MessageSendMode.Reliable, (ushort)(ServerToClientId.startGame));
-        startGame.AddUShort(id);
+        startGame.AddString(guid.ToString());
 
         SendToAll(startGame);
     }

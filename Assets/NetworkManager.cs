@@ -1,29 +1,39 @@
 using Riptide;
 using Riptide.Utils;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
+
+public enum SessionType : ushort
+{
+    pub = 1,
+    priv = 2,
+}
 
 public enum ServerToClientId : ushort
 {
     session = 1,
-    playerJoined = 2,
-    startGame = 3,
-    playerData = 4,
-    playerAction = 5,
-    newEnemy = 6,
-    updateEnemySpeed = 7,
-    enemyDead = 8,
-    gameOver = 9,
-    updateRestartCount = 10,
+    wrongCode = 2,
+    playerJoined = 3,
+    startGame = 4,
+    playerData = 5,
+    playerAction = 6,
+    newEnemy = 7,
+    updateEnemySpeed = 8,
+    enemyDead = 9,
+    gameOver = 10,
+    updateRestartCount = 11,
+    endSession = 12,
 }
 
 public enum ClientToServerId : ushort
 {
-    isReady = 1,
-    playerData = 2,
-    playerAction = 3,
-    enemyHurt = 4,
-    updateRestartCount = 5,
+    joinSession = 1,
+    isReady = 2,
+    playerData = 3,
+    playerAction = 4,
+    enemyHurt = 5,
+    updateRestartCount = 6,
 }
 
 public class NetworkManager : MonoBehaviour
@@ -51,7 +61,9 @@ public class NetworkManager : MonoBehaviour
     [SerializeField] private ushort port;
     [SerializeField] private ushort maxClientCount;
 
-    private static Session session;
+    Guid? publicSessionWaiting;
+    private Dictionary<Guid, Session> sessions;
+    private Dictionary<ushort, Guid> playerSession;
 
     private void Awake()
     {
@@ -68,12 +80,17 @@ public class NetworkManager : MonoBehaviour
         Server.ClientConnected += PlayerJoined;
         Server.ClientDisconnected += PlayerLeft;
 
-        session = null;
+        publicSessionWaiting = null;
+        sessions = new Dictionary<Guid, Session>();
+        playerSession = new Dictionary<ushort, Guid>();
     }
 
     private void FixedUpdate()
     {
-        session?.Update();
+        foreach ((Guid _, Session session) in sessions)
+        {
+            session?.Update();
+        }
 
         Server.Update();
     }
@@ -83,27 +100,113 @@ public class NetworkManager : MonoBehaviour
         Server.Stop();
     }
 
+    private Session GetSession(ushort playerId)
+    {
+        return sessions[playerSession[playerId]];
+    }
+
     private void PlayerJoined(object sender, ServerConnectedEventArgs e)
     {
         e.Client.CanTimeout = false;
-        session ??= new Session(1);
-
-        session.AddPlayer(e.Client.Id);
     }
 
     private void PlayerLeft(object sender, ServerDisconnectedEventArgs e)
     {
-        session = null;
+        Guid sessionId = playerSession[e.Client.Id];
+        if (sessions.ContainsKey(sessionId))
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, (ushort)ServerToClientId.endSession);
+            SendToOtherInSession(sessionId, e.Client.Id, message);
+
+            sessions[sessionId] = null;
+            sessions.Remove(sessionId);
+        }
+
+        playerSession.Remove(e.Client.Id);
     }
 
-    public void SendToAllInSession(ushort sessionId, Message message)
+    public void SendToOtherInSession(Guid sessionId, ushort playerId, Message message)
     {
-        session?.SendToAll(message);
+        if (sessions.ContainsKey(sessionId))
+        {
+            sessions[sessionId]?.SendToOther(playerId, message);
+        }
+    }
+
+    public void SendToAllInSession(Guid sessionId, Message message)
+    {
+        if (sessions.ContainsKey(sessionId))
+        {
+            sessions[sessionId]?.SendToAll(message);
+        }
+    }
+
+    [MessageHandler((ushort)ClientToServerId.joinSession)]
+    private static void JoinSession(ushort fromClientId, Message message)
+    {
+        SessionType type = (SessionType)message.GetUShort();
+
+        switch (type)
+        {
+            case SessionType.pub:
+                {
+                    if (Singleton.publicSessionWaiting.HasValue)
+                    {
+                        Singleton.playerSession.Add(fromClientId, Singleton.publicSessionWaiting.Value);
+                        Singleton.sessions[Singleton.publicSessionWaiting.Value].AddPlayer(fromClientId);
+                        Singleton.publicSessionWaiting = null;
+                    }
+                    else
+                    {
+                        Singleton.publicSessionWaiting = Guid.NewGuid();
+                        Singleton.playerSession.Add(fromClientId, Singleton.publicSessionWaiting.Value);
+                        Singleton.sessions.Add(Singleton.publicSessionWaiting.Value, new Session(Singleton.publicSessionWaiting.Value));
+                        Singleton.sessions[Singleton.publicSessionWaiting.Value].AddPlayer(fromClientId);
+                    }
+
+                    break;
+                }
+            case SessionType.priv:
+                {
+                    if (message.UnreadLength > 0)
+                    {
+                        bool isValid = Guid.TryParse(message.GetString(), out Guid sessionId);
+
+                        if (isValid && Singleton.sessions.ContainsKey(sessionId))
+                        {
+                            Singleton.playerSession.Add(fromClientId, sessionId);
+                            Singleton.sessions[sessionId].AddPlayer(fromClientId);
+                        }
+                        else
+                        {
+                            Message wrongCode = Message.Create(MessageSendMode.Reliable, (ushort)ServerToClientId.wrongCode);
+                            Singleton.Server.Send(wrongCode, fromClientId);
+                        }
+                    }
+                    else
+                    {
+                        Guid sessionId = Guid.NewGuid();
+                        Singleton.playerSession.Add(fromClientId, sessionId);
+                        Singleton.sessions.Add(sessionId, new Session(sessionId));
+                        Singleton.sessions[sessionId].AddPlayer(fromClientId);
+                    }
+
+                    break;
+                }
+            default:
+                {
+                    Debug.Log("(SERVER): Wrong session type.");
+                    break;
+                }
+        }
+        
     }
 
     [MessageHandler((ushort)(ClientToServerId.isReady))]
-    private static void PlayerReady(ushort fromClientId, Message message)
+    private static void PlayerReady(ushort fromClientId, Message _)
     {
+        Session session = Singleton.GetSession(fromClientId);
+
         session.SetReady(fromClientId);
 
         if (session.IsReady())
@@ -115,6 +218,7 @@ public class NetworkManager : MonoBehaviour
     [MessageHandler((ushort)(ClientToServerId.playerData))]
     private static void UpdatePlayerData(ushort fromClientId, Message message)
     {
+        Session session = Singleton.GetSession(fromClientId);
         Vector3 position = message.GetVector3();
 
         session?.UpdatePlayerPosition(fromClientId, position);
@@ -123,22 +227,25 @@ public class NetworkManager : MonoBehaviour
     [MessageHandler((ushort)ClientToServerId.playerAction)]
     private static void HandlePlayerAction(ushort fromClientId, Message message)
     {
+        Session session = Singleton.GetSession(fromClientId);
         ushort action = message.GetUShort();
 
         session?.HandlePlayerAction(fromClientId, action, message);
     }
 
     [MessageHandler((ushort)ClientToServerId.enemyHurt)]
-    private static void HandleEnemyHurt(ushort _, Message message)
+    private static void HandleEnemyHurt(ushort fromClientId, Message message)
     {
+        Session session = Singleton.GetSession(fromClientId);
         Guid guid = new(message.GetString());
 
-        session.HandleEnemyHurt(guid);
+        session?.HandleEnemyHurt(guid);
     }
 
     [MessageHandler((ushort)ClientToServerId.updateRestartCount)]
-    private static void UpdateRestartCound(ushort _, Message message)
+    private static void UpdateRestartCound(ushort fromClientId, Message message)
     {
+        Session session = Singleton.GetSession(fromClientId);
         bool wantsRestart = message.GetBool();
 
         session?.HandleReadyToRestart(wantsRestart);

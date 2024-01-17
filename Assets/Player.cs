@@ -1,4 +1,5 @@
 using Riptide;
+using System;
 using UnityEngine;
 
 public enum PlayerActions: ushort
@@ -66,10 +67,10 @@ public class Player
     #endregion
 
     #region MessagesToPlayer
-    public void RecvSession(ushort sessionId)
+    public void RecvSession(Guid sessionId)
     {
         Message recvSession = Message.Create(MessageSendMode.Reliable, (ushort)(ServerToClientId.session));
-        recvSession.AddUShort(sessionId);
+        recvSession.AddString(sessionId.ToString());
 
         NetworkManager.Singleton.Server.Send(recvSession, id);
     }
