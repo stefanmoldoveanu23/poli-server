@@ -58,7 +58,7 @@ public class EnemyManager
     }
 
     // Instantiate an enemy at a random position on the y-axis with a speed and direction
-    void InstantiateEnemy()
+    public void InstantiateEnemy()
     {
         Guid enemyGuid = Guid.NewGuid();
         ushort enemyType = (ushort)(Random.value * NumberOfEnemyTypes);
@@ -74,7 +74,7 @@ public class EnemyManager
     }
 
     // Update the speed of all enemies
-    void UpdateEnemySpeed()
+    public void UpdateEnemySpeed()
     {
         Message updateEnemySpeed = Message.Create(MessageSendMode.Reliable, (ushort)ServerToClientId.updateEnemySpeed);
         NetworkManager.Singleton.SendToAllInSession(sessionId, updateEnemySpeed);
@@ -109,5 +109,10 @@ public class EnemyManager
                 enemyList.Remove(guid);
             }
         }
+    }
+
+    public int EnemyCount()
+    {
+        return enemyList.Count;
     }
 }

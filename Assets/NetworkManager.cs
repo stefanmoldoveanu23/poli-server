@@ -112,17 +112,20 @@ public class NetworkManager : MonoBehaviour
 
     private void PlayerLeft(object sender, ServerDisconnectedEventArgs e)
     {
-        Guid sessionId = playerSession[e.Client.Id];
-        if (sessions.ContainsKey(sessionId))
+        if (playerSession.ContainsKey(e.Client.Id))
         {
-            Message message = Message.Create(MessageSendMode.Reliable, (ushort)ServerToClientId.endSession);
-            SendToOtherInSession(sessionId, e.Client.Id, message);
+            Guid sessionId = playerSession[e.Client.Id];
+            if (sessions.ContainsKey(sessionId))
+            {
+                Message message = Message.Create(MessageSendMode.Reliable, (ushort)ServerToClientId.endSession);
+                SendToOtherInSession(sessionId, e.Client.Id, message);
 
-            sessions[sessionId] = null;
-            sessions.Remove(sessionId);
+                sessions[sessionId] = null;
+                sessions.Remove(sessionId);
+            }
+
+            playerSession.Remove(e.Client.Id);
         }
-
-        playerSession.Remove(e.Client.Id);
     }
 
     public void SendToOtherInSession(Guid sessionId, ushort playerId, Message message)
@@ -249,5 +252,15 @@ public class NetworkManager : MonoBehaviour
         bool wantsRestart = message.GetBool();
 
         session?.HandleReadyToRestart(wantsRestart);
+    }
+
+    public int ClientCount()
+    {
+        return Server.ClientCount;
+    }
+
+    public int PlayerCount()
+    {
+        return playerSession.Count;
     }
 }
