@@ -19,10 +19,4 @@ jobs:
           instance_name: instance-1
           zone: us-west4-b
           ssh_private_key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
-          command: |-
-            cd poli-server
-            git pull origin main
-            cd ..
-            sudo ./build.sh
-            sudo systemctl stop poli-server
-            sudo systemctl start poli-server
+          script: ${{ github.workspace }}/script.sh
