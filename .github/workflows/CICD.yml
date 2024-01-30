@@ -11,7 +11,6 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
-          
       - uses: actions/cache@v3
         with:
           path: Library
@@ -24,7 +23,7 @@ jobs:
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
         with:
           unityVersion: 2022.3.13f1
-          customParameters: -quit -batchmode -nographics
+          customParameters: -batchmode -nographics
           targetPlatform: StandaloneLinux64
       - uses: actions/upload-artifact@v3
         with:
