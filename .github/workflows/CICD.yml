@@ -14,9 +14,7 @@ jobs:
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
-      - uses: google-github-actions/ssh-compute@v1
+      - uses: google-github-actions/setup-gcloud@v2
         with:
-          instance_name: instance-1
-          zone: us-west4-b
-          ssh_private_key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
-          script: ${{ github.workspace }}/script.sh
+          version: '>= 363.0.0'
+      - run: gcloud compute scp build/StandaloneWindows64 instance-1:/home/stefan_moldoveanu23
