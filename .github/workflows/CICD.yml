@@ -2,6 +2,7 @@ name: Build project
 
 on: [push]
 
+
 jobs:
   buildForLinux:
     name: Build for Linux
