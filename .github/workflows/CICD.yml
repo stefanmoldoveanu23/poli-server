@@ -17,4 +17,4 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
         with:
           version: '>= 363.0.0'
-      - run: gcloud compute scp build/StandaloneWindows64 instance-1:/home/stefan_moldoveanu23
+      - run: gcloud compute scp --zone=us-west4-b build/StandaloneWindows64 instance-1:/home/stefan_moldoveanu23
