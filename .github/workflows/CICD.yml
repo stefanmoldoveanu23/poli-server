@@ -11,11 +11,24 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
+      - uses: actions/cache@v3
+        with:
+          path: Library
+          key: Lirbrary-StandaloneLinux64
+          restore-keys: Library-
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          unityVersion: 2022.3.13f1
+          allowDirtyBuild: true
+          targetPlatform: StandaloneLinux64
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
       - uses: google-github-actions/setup-gcloud@v2
         with:
           version: '>= 363.0.0'
-          
-      - run: gcloud compute scp --zone=us-west4-b build/StandaloneWindows64 instance-1:/home/stefan_moldoveanu23
+      - run: gcloud compute scp --zone=us-west4-b build/StandaloneLinux64 instance-1:/home/stefan_moldoveanu23
