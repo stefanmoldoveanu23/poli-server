@@ -11,24 +11,6 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
-      - uses: actions/cache@v3
-        with:
-          path: Library
-          key: Lirbrary-StandaloneLinux64
-          restore-keys: Library-
-      - uses: game-ci/unity-builder@v4
-        env:
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-        with:
-          unityVersion: 2022.3.13f1
-          allowDirtyBuild: true
-          targetPlatform: StandaloneLinux64
-      - uses: actions/upload-artifact@v3
-        with:
-          name: Build-StandaloneLinux64
-          path: build/StandaloneLinux64
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
@@ -40,5 +22,7 @@ jobs:
           command: |-
             cd poli-server
             git pull origin main
+            cd ..
+            sudo ./build.sh
             sudo systemctl stop poli-server
             sudo systemctl start poli-server
