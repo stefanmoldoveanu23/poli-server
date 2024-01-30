@@ -11,7 +11,6 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
-          
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
@@ -19,7 +18,7 @@ jobs:
         with:
           instance_name: instance-1
           zone: us-west4-b
-          ssh-private-key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          ssh_private_key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
           command: |-
             echo Hello world
       - uses: actions/cache@v3
