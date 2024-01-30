@@ -6,8 +6,11 @@ jobs:
   buildForLinux:
     name: Build for Linux
     runs-on: ubuntu-latest
-    
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
       - uses: actions/cache@v3
         with:
           path: Library
