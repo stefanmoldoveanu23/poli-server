@@ -31,4 +31,10 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
         with:
           version: '>= 363.0.0'
-      - run: gcloud compute scp --zone=us-west4-b --recurse build/ stefan_moldoveanu23@instance-1:/home/stefan_moldoveanu23
+      - run: gcloud compute scp --zone=us-west4-b --recurse build/StandaloneLinux64 stefan_moldoveanu23@instance-1:/home/stefan_moldoveanu23
+      - uses: google-github-actions/ssh-compute@v1
+        with:
+          instance_name: instance-1
+          zone: us-west4-b
+          ssh_private_key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          script: ${{ github.workspace }}/script.sh
